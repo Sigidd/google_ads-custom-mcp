@@ -228,7 +228,7 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
           advertisingChannelType: advertising_channel_type,
           status: status ?? "ENABLED",
           campaignBudget: budgetResourceName,
-          containsEuPoliticalAdvertising: false,
+          containsEuPoliticalAdvertising: "NOT_EU_POLITICAL_ADVERTISING",
         };
 
         if (start_date) campaignCreate.startDate = start_date.replace(/-/g, "");
