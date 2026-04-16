@@ -837,6 +837,43 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
     }
   );
 
+  server.tool(
+    "add_campaign_negative_keywords",
+    "Add negative keywords at the campaign level (blocks traffic for all ad groups in the campaign).",
+    {
+      customer_id: z.string().describe("Google Ads customer ID"),
+      campaign_id: z.string().describe("Campaign ID"),
+      keywords: z
+        .array(
+          z.object({
+            text: z.string().describe("Keyword text"),
+            match_type: z.enum(["BROAD", "PHRASE", "EXACT"]).describe("Match type"),
+          })
+        )
+        .describe("Array of negative keywords to add"),
+    },
+    async ({ customer_id, campaign_id, keywords }) => {
+      try {
+        const campaignResourceName = `customers/${customer_id}/campaigns/${campaign_id}`;
+        const operations = keywords.map((kw) => ({
+          campaignCriterionOperation: {
+            create: {
+              campaign: campaignResourceName,
+              negative: true,
+              keyword: {
+                text: kw.text,
+                matchType: kw.match_type,
+              },
+            },
+          },
+        }));
+        return ok(await client.mutate(customer_id, operations));
+      } catch (e) {
+        return err(e);
+      }
+    }
+  );
+
   // ════════════════════════════════════════════════════════════════════════════
   // BUDGET TOOLS
   // ════════════════════════════════════════════════════════════════════════════
