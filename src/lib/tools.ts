@@ -208,12 +208,14 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
     }) => {
       try {
         // First create a budget (timestamp suffix ensures unique name)
+        // isExplicitlyShared: false is required for MAXIMIZE_CONVERSIONS
         const budgetResult = await client.mutateCampaignBudgets(customer_id, [
           {
             create: {
               name: `Budget for ${name} ${Date.now()}`,
               amountMicros: budget_amount_micros.toString(),
               deliveryMethod: "STANDARD",
+              isExplicitlyShared: false,
             },
           },
         ]) as { results?: Array<{ resourceName: string }> };
@@ -228,7 +230,7 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
           advertisingChannelType: advertising_channel_type,
           status: status ?? "ENABLED",
           campaignBudget: budgetResourceName,
-          containsEuPoliticalAdvertising: "UNSPECIFIED",
+          containsEuPoliticalAdvertising: 3, // NOT_EU_POLITICAL_ADVERTISING
         };
 
         if (start_date) campaignCreate.startDate = start_date.replace(/-/g, "");
