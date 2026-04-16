@@ -745,6 +745,7 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
               .enum(["BROAD", "PHRASE", "EXACT"])
               .describe("Match type"),
             cpc_bid_micros: optNum.describe("CPC bid in micros (optional)"),
+            negative: z.boolean().optional().describe("True to add as a negative keyword"),
           })
         )
         .describe("Array of keywords to add"),
@@ -755,12 +756,13 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
           const create: Record<string, unknown> = {
             adGroup: `customers/${customer_id}/adGroups/${ad_group_id}`,
             status: "ENABLED",
+            negative: kw.negative ?? false,
             keyword: {
               text: kw.text,
               matchType: kw.match_type,
             },
           };
-          if (kw.cpc_bid_micros !== undefined) {
+          if (kw.cpc_bid_micros !== undefined && !kw.negative) {
             create.cpcBidMicros = kw.cpc_bid_micros.toString();
           }
           return { adGroupCriterionOperation: { create } };
