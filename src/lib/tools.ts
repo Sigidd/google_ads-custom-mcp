@@ -186,6 +186,10 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
       budget_amount_micros: z
         .number()
         .describe("Daily budget in micros (1,000,000 = $1)"),
+      status: z
+        .enum(["ENABLED", "PAUSED"])
+        .optional()
+        .describe("Campaign status (default: ENABLED)"),
       target_cpa_micros: optNum.describe("Target CPA in micros (optional)"),
       target_roas: optNum.describe("Target ROAS as a ratio e.g. 4.0 = 400% (optional)"),
       start_date: optStr.describe("Start date YYYY-MM-DD (optional)"),
@@ -196,6 +200,7 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
       name,
       advertising_channel_type,
       budget_amount_micros,
+      status,
       target_cpa_micros,
       target_roas,
       start_date,
@@ -221,8 +226,9 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
         const campaignCreate: Record<string, unknown> = {
           name,
           advertisingChannelType: advertising_channel_type,
-          status: "ENABLED",
+          status: status ?? "ENABLED",
           campaignBudget: budgetResourceName,
+          containsEuPoliticalAdvertising: false,
         };
 
         if (start_date) campaignCreate.startDate = start_date.replace(/-/g, "");
@@ -233,7 +239,7 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
         } else if (target_roas) {
           campaignCreate.targetRoas = { targetRoas: target_roas };
         } else {
-          campaignCreate.manualCpc = { enhancedCpcEnabled: false };
+          campaignCreate.maximizeConversions = {};
         }
 
         return ok(
