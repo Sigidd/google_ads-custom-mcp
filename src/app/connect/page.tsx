@@ -72,7 +72,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#f0f0f5",
+    background: "#f1f3f4",
     fontFamily: "system-ui, sans-serif",
     padding: "1rem",
   },

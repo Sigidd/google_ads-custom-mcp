@@ -1,7 +1,7 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 
-const ACCENT = "#6366f1";
+const ACCENT = "#4285F4";
 
 export default function ConnectForm() {
   const params = useSearchParams();

@@ -9,7 +9,7 @@
  */
 import { store } from "./store";
 
-const GOOGLE_ADS_API_BASE = "https://googleads.googleapis.com/v18";
+const GOOGLE_ADS_API_BASE = "https://googleads.googleapis.com/v21";
 
 export class GoogleAdsClient {
   constructor(private userId: string) {}
@@ -92,7 +92,7 @@ export class GoogleAdsClient {
     return this.request(
       "POST",
       `customers/${customerId}/googleAds:search`,
-      { query, pageSize },
+      { query },
       loginCustomerId
     );
   }
