@@ -1367,4 +1367,173 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
       }
     }
   );
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SITELINK TOOLS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    "add_sitelinks",
+    "Add sitelink assets to a campaign. Creates the sitelink assets and attaches them to the campaign.",
+    {
+      customer_id: z.string().describe("Google Ads customer ID"),
+      campaign_id: z.string().describe("Campaign ID to attach sitelinks to"),
+      sitelinks: z
+        .array(
+          z.object({
+            link_text: z.string().max(25).describe("Sitelink link text (max 25 chars)"),
+            description1: z.string().max(35).optional().describe("Description line 1 (max 35 chars, optional)"),
+            description2: z.string().max(35).optional().describe("Description line 2 (max 35 chars, optional)"),
+            final_url: z.string().describe("Landing page URL for the sitelink"),
+          })
+        )
+        .describe("Array of sitelinks to add"),
+    },
+    async ({ customer_id, campaign_id, sitelinks }) => {
+      try {
+        const campaignResourceName = `customers/${customer_id}/campaigns/${campaign_id}`;
+
+        // Step 1: Create sitelink assets
+        const assetOps = sitelinks.map((sl) => {
+          const sitelinkAsset: Record<string, unknown> = {
+            linkText: sl.link_text,
+            finalUrls: [sl.final_url],
+          };
+          if (sl.description1) sitelinkAsset.description1 = sl.description1;
+          if (sl.description2) sitelinkAsset.description2 = sl.description2;
+          return {
+            assetOperation: {
+              create: {
+                name: `Sitelink: ${sl.link_text}`,
+                type: "SITELINK",
+                sitelinkAsset,
+              },
+            },
+          };
+        });
+
+        const assetResult = await client.mutate(customer_id, assetOps) as {
+          mutateOperationResponses?: Array<{ assetResult?: { resourceName: string } }>;
+        };
+
+        const assetResourceNames = (assetResult.mutateOperationResponses ?? [])
+          .map((r) => r.assetResult?.resourceName)
+          .filter(Boolean) as string[];
+
+        if (assetResourceNames.length === 0) {
+          throw new Error("No sitelink assets were created");
+        }
+
+        // Step 2: Link assets to campaign
+        const linkOps = assetResourceNames.map((assetRn) => ({
+          campaignAssetOperation: {
+            create: {
+              campaign: campaignResourceName,
+              asset: assetRn,
+              fieldType: "SITELINK",
+            },
+          },
+        }));
+
+        const linkResult = await client.mutate(customer_id, linkOps);
+        return ok({ assetsCreated: assetResourceNames, linkResult });
+      } catch (e) {
+        return err(e);
+      }
+    }
+  );
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // EXPERIMENT TOOLS (A/B Testing)
+  // ════════════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    "create_campaign_experiment",
+    "Create an A/B experiment to test two campaigns against each other (e.g. different bidding strategies). Splits traffic 50/50 between a control and treatment campaign.",
+    {
+      customer_id: z.string().describe("Google Ads customer ID"),
+      experiment_name: z.string().describe("Name for the experiment"),
+      control_campaign_id: z.string().describe("Campaign ID for the control arm (original)"),
+      treatment_campaign_id: z.string().describe("Campaign ID for the treatment arm (variant to test)"),
+      start_date: z.string().describe("Start date YYYY-MM-DD"),
+      end_date: z.string().describe("End date YYYY-MM-DD"),
+      traffic_split: z.number().min(1).max(99).optional().describe("% traffic to treatment arm (default 50)"),
+    },
+    async ({
+      customer_id,
+      experiment_name,
+      control_campaign_id,
+      treatment_campaign_id,
+      start_date,
+      end_date,
+      traffic_split = 50,
+    }) => {
+      try {
+        // Step 1: Create the experiment
+        const expResult = await client.mutateExperiments(customer_id, [
+          {
+            create: {
+              name: experiment_name,
+              type: "SEARCH_CUSTOM",
+              status: "SETUP",
+              startDate: start_date.replace(/-/g, ""),
+              endDate: end_date.replace(/-/g, ""),
+              suffix: "_exp",
+            },
+          },
+        ]) as { results?: Array<{ resourceName: string }> };
+
+        const experimentRn = expResult?.results?.[0]?.resourceName;
+        if (!experimentRn) throw new Error("Failed to create experiment");
+
+        // Step 2: Create control arm
+        const controlArm = {
+          create: {
+            experiment: experimentRn,
+            name: "Control",
+            control: true,
+            trafficSplit: 100 - traffic_split,
+            campaigns: [`customers/${customer_id}/campaigns/${control_campaign_id}`],
+          },
+        };
+
+        // Step 3: Create treatment arm
+        const treatmentArm = {
+          create: {
+            experiment: experimentRn,
+            name: "Treatment",
+            control: false,
+            trafficSplit: traffic_split,
+            campaigns: [`customers/${customer_id}/campaigns/${treatment_campaign_id}`],
+          },
+        };
+
+        const armsResult = await client.mutateExperimentArms(customer_id, [controlArm, treatmentArm]);
+
+        return ok({
+          experimentResourceName: experimentRn,
+          armsResult,
+          note: "Experiment created in SETUP status. Call schedule_experiment to launch it.",
+        });
+      } catch (e) {
+        return err(e);
+      }
+    }
+  );
+
+  server.tool(
+    "schedule_experiment",
+    "Schedule (launch) a campaign experiment that is in SETUP status.",
+    {
+      customer_id: z.string().describe("Google Ads customer ID"),
+      experiment_resource_name: z.string().describe("Full resource name of the experiment, e.g. customers/123/experiments/456"),
+    },
+    async ({ customer_id, experiment_resource_name }) => {
+      try {
+        return ok(await client.scheduleExperiment(customer_id, experiment_resource_name));
+      } catch (e) {
+        return err(e);
+      }
+    }
+  );
 }

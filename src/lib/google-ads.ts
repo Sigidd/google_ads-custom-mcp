@@ -154,4 +154,45 @@ export class GoogleAdsClient {
       { operations }
     );
   }
+
+  // ── Experiment operations ─────────────────────────────────────────────────
+
+  async mutateExperiments(
+    customerId: string,
+    operations: unknown[],
+    loginCustomerId?: string
+  ) {
+    return this.request(
+      "POST",
+      `customers/${customerId}/experiments:mutate`,
+      { operations },
+      loginCustomerId
+    );
+  }
+
+  async mutateExperimentArms(
+    customerId: string,
+    operations: unknown[],
+    loginCustomerId?: string
+  ) {
+    return this.request(
+      "POST",
+      `customers/${customerId}/experimentArms:mutate`,
+      { operations },
+      loginCustomerId
+    );
+  }
+
+  async scheduleExperiment(
+    customerId: string,
+    experimentResourceName: string,
+    loginCustomerId?: string
+  ) {
+    return this.request(
+      "POST",
+      `${experimentResourceName}:schedule`,
+      {},
+      loginCustomerId
+    );
+  }
 }
