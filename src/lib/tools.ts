@@ -207,11 +207,11 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
       end_date,
     }) => {
       try {
-        // First create a budget
+        // First create a budget (timestamp suffix ensures unique name)
         const budgetResult = await client.mutateCampaignBudgets(customer_id, [
           {
             create: {
-              name: `Budget for ${name}`,
+              name: `Budget for ${name} ${Date.now()}`,
               amountMicros: budget_amount_micros.toString(),
               deliveryMethod: "STANDARD",
             },
