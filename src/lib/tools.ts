@@ -215,7 +215,7 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
               name: `Budget for ${name} ${Date.now()}`,
               amountMicros: budget_amount_micros.toString(),
               deliveryMethod: "STANDARD",
-              isExplicitlyShared: false,
+              explicitlyShared: false,
             },
           },
         ]) as { results?: Array<{ resourceName: string }> };
