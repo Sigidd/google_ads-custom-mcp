@@ -236,11 +236,17 @@ export function registerTools(server: McpServer, client: GoogleAdsClient) {
         if (start_date) campaignCreate.startDate = start_date.replace(/-/g, "");
         if (end_date) campaignCreate.endDate = end_date.replace(/-/g, "");
 
-        if (target_cpa_micros) {
-          campaignCreate.targetCpa = { targetCpaMicros: target_cpa_micros.toString() };
+        if (target_cpa_micros && target_roas) {
+          // Both set — MaxConversions with CPA goal takes priority
+          campaignCreate.maximizeConversions = { targetCpaMicros: target_cpa_micros.toString() };
+        } else if (target_cpa_micros) {
+          // Maximize Conversions with Target CPA goal (smart bidding)
+          campaignCreate.maximizeConversions = { targetCpaMicros: target_cpa_micros.toString() };
         } else if (target_roas) {
-          campaignCreate.targetRoas = { targetRoas: target_roas };
+          // Maximize Conversion Value with Target ROAS goal
+          campaignCreate.maximizeConversionValue = { targetRoas: target_roas };
         } else {
+          // Pure Maximize Conversions (no target)
           campaignCreate.maximizeConversions = {};
         }
 
